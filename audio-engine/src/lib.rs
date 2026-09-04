@@ -1,14 +1,17 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+use cpal::traits::{DeviceTrait, HostTrait};
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub fn enumerate_devices() {
+    let host = cpal::default_host();
+    let devices = host.output_devices().expect("unable to fetch devices");
+    devices.for_each(|device| {
+        println!("{device}");
+    });
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+    let default_output_device = host
+        .default_output_device()
+        .expect("unable to fetch default output device");
+    let output_config = default_output_device
+        .default_output_config()
+        .expect("unable to fetch default output config");
+    println!("{:?}", output_config)
 }

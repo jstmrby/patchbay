@@ -120,4 +120,5 @@ coach/reviewer, breaking work into small steps and reviewing after each one.
 
 ## Status
 Phase 0 complete (env confirmed, Cargo workspace + Tauri/Svelte scaffold in
-place, dev round trip working). Next up: Phase 1, Step 1.
+place, dev round trip working). Phase 1, Step 1 done (cpal device enumeration
++ default output config printed). Next up: Phase 1, Step 2.
