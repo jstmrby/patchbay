@@ -1,0 +1,6 @@
+[env]
+# WebKitGTK's DMA-BUF renderer trips a Wayland protocol error under
+# Hyprland (Gdk-Message: Error 71), which crashes the app window and takes
+# the whole `tauri dev` process tree down with it. Disabling it forces the
+# older, stable rendering path.
+WEBKIT_DISABLE_DMABUF_RENDERER = "1"
