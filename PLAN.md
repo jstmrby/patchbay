@@ -121,4 +121,8 @@ coach/reviewer, breaking work into small steps and reviewing after each one.
 ## Status
 Phase 0 complete (env confirmed, Cargo workspace + Tauri/Svelte scaffold in
 place, dev round trip working). Phase 1, Step 1 done (cpal device enumeration
-+ default output config printed). Next up: Phase 1, Step 2.
++ default output config printed). Phase 1, Step 2 done (generated sine wave
+playing through a cpal output stream, phase-continuous across callbacks).
+Phase 1, Step 3 done (symphonia decodes a WAV file; duration, sample rate,
+real decoded sample format, and sample count all printed from actual PCM).
+Next up: Phase 1, Step 4.
