@@ -1,7 +1,7 @@
 use std::{f32::consts, fs::File, thread, time::Duration};
 
 use cpal::{
-    SampleFormat, StreamConfig, SupportedBufferSize, SupportedStreamConfig,
+    ErrorKind, SampleFormat, StreamConfig, SupportedBufferSize, SupportedStreamConfig,
     traits::{DeviceTrait, HostTrait, StreamTrait},
 };
 use symphonia::{
@@ -120,9 +120,15 @@ pub fn parse_wav(path: &str) {
 
     let cp = decoder.codec_params();
     let sample_rate = cp.sample_rate.expect("sample rate could not be determined");
-    let channel_count = cp.channels.as_ref().expect("no channels found").count();
-    let mut sample_data: Vec<f32> = Vec::new();
+    let channel_count = cp
+        .channels
+        .as_ref()
+        .expect("no channels found")
+        .count()
+        .try_into()
+        .expect("channel count too large");
 
+    let mut sample_data: Vec<f32> = Vec::new();
     // The decode loop.
     loop {
         // Get the next packet from the media format.
@@ -185,9 +191,23 @@ pub fn parse_wav(path: &str) {
     let device = host
         .default_output_device()
         .expect("unable to fetch default output device");
+    let supported_output_configs = match device.supported_output_configs() {
+        Ok(socs) => socs,
+        Err(err) => match err.kind() {
+            ErrorKind::DeviceNotAvailable => panic!("device disconnected"),
+            ErrorKind::UnsupportedConfig => panic!("could not determine what the device supports"),
+            ErrorKind::UnsupportedOperation => panic!("device does not support output"),
+            _ => panic!("unknown output config error"),
+        },
+    };
+
+    supported_output_configs
+        .into_iter()
+        .find(|socr| socr.channels() == channel_count && socr.contains_rate(sample_rate))
+        .expect("unsupported stream config");
 
     let config = StreamConfig::from(SupportedStreamConfig::new(
-        channel_count.try_into().expect("channel count too large"),
+        channel_count,
         sample_rate,
         SupportedBufferSize::default(),
         SampleFormat::F32,

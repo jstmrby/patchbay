@@ -120,19 +120,40 @@ coach/reviewer, breaking work into small steps and reviewing after each one.
 
 ## Status
 Phase 0 complete (env confirmed, Cargo workspace + Tauri/Svelte scaffold in
-place, dev round trip working). Phase 1, Step 1 done (cpal device enumeration
-+ default output config printed). Phase 1, Step 2 done (generated sine wave
-playing through a cpal output stream, phase-continuous across callbacks).
-Phase 1, Step 3 done (symphonia decodes a WAV file; duration, sample rate,
-real decoded sample format, and sample count all printed from actual PCM).
-Phase 1, Step 4 done (decoded WAV samples played end-to-end through a cpal
-stream built from the file's own sample rate/channel count; output always
-normalized to f32 via symphonia's conversion). Known punts, to revisit later:
-whole file is decoded into memory before playback (deferred to Step 7's
-multi-voice/mixing redesign, rather than a one-off streaming fix now); no
-check that the output device actually supports the file's rate/channels
-(that's Step 6). Phase 1, Step 5 done (MP3 playback works via the same
-decode/playback path — only change needed was enabling symphonia's "mp3"
-feature flag, confirming the pipeline was built against symphonia's
-codec-agnostic traits rather than anything WAV-specific). Next up: Phase 1,
-Step 6.
+place, dev round trip working).
+
+Phase 1: Step 1 done (cpal device enumeration + default output config
+printed). Step 2 done (generated sine wave playing through a cpal output
+stream, phase-continuous across callbacks). Step 3 done (symphonia decodes a
+WAV file; duration, sample rate, real decoded sample format, and sample count
+all printed from actual PCM). Step 4 done (decoded WAV samples played
+end-to-end through a cpal stream built from the file's own sample
+rate/channel count; output normalized to f32 via symphonia's conversion).
+Step 5 done (MP3 playback works via the same decode/playback path — only
+change needed was enabling symphonia's "mp3" feature flag). Step 6 done
+(fail-loudly scope: verifies the device has a supported-config entry with an
+exact channel-count match at the file's sample rate before opening the
+stream; panics clearly otherwise).
+
+Next up: Phase 1, Step 7.
+
+See "Deferred Enhancements" at the end of this file for punted items picked
+up along the way.
+
+## Deferred Enhancements
+Punted items from completed steps, kept here instead of scattered inline so
+they aren't lost. Listed in the order encountered. Revisit if/when they
+actually matter, not proactively.
+
+- **[High] Streaming decode instead of whole-file buffering** (from Phase 1
+  Step 4): currently the entire file is decoded into memory before playback
+  starts. Likely gets subsumed by Phase 1 Step 7's multi-voice mixer redesign
+  rather than needing a standalone fix.
+- **[Medium] Resampling** (from Phase 1 Step 6): mismatches are currently
+  only detected and failed loudly, not resampled. Revisit if a real
+  file/device combo actually hits this.
+- **[Low] Channel remapping** (from Phase 1 Step 6): correctly placing a
+  file's channels onto specific channels of a device that supports *more*
+  channels than the file needs (e.g. stereo content on a 6-channel device),
+  instead of just requiring an exact channel-count match. Not needed unless a
+  real device/file combo calls for it.
