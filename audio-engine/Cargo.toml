@@ -5,4 +5,4 @@ edition = "2024"
 
 [dependencies]
 cpal = "0.18.2"
-symphonia = { version = "0.6.1", features = ["wav"] }
+symphonia = { version = "0.6.1", features = ["wav", "mp3"] }

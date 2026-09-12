@@ -1,12 +1,11 @@
 use std::{f32::consts, fs::File, thread, time::Duration};
 
 use cpal::{
-    SampleFormat,
+    SampleFormat, StreamConfig, SupportedBufferSize, SupportedStreamConfig,
     traits::{DeviceTrait, HostTrait, StreamTrait},
 };
 use symphonia::{
     core::{
-        audio::GenericAudioBufferRef,
         codecs::audio::AudioDecoderOptions,
         errors::Error,
         formats::{FormatOptions, TrackType, probe::Hint},
@@ -120,10 +119,9 @@ pub fn parse_wav(path: &str) {
     let track_id = track.id;
 
     let cp = decoder.codec_params();
-    println!("Sample rate: {:?}", cp.sample_rate.unwrap());
-
-    let mut sample_count = 0;
-    let mut sample_variant = None;
+    let sample_rate = cp.sample_rate.expect("sample rate could not be determined");
+    let channel_count = cp.channels.as_ref().expect("no channels found").count();
+    let mut sample_data: Vec<f32> = Vec::new();
 
     // The decode loop.
     loop {
@@ -164,21 +162,9 @@ pub fn parse_wav(path: &str) {
         match decoder.decode(&packet) {
             Ok(decoded) => {
                 // Consume the decoded audio samples (see below).
-                sample_count += decoded.samples_interleaved();
-                if sample_variant.is_none() {
-                    sample_variant = match decoded {
-                        GenericAudioBufferRef::U8(_audio_buffer) => Some(SampleFormat::U8),
-                        GenericAudioBufferRef::U16(_audio_buffer) => Some(SampleFormat::U16),
-                        GenericAudioBufferRef::U24(_audio_buffer) => Some(SampleFormat::U24),
-                        GenericAudioBufferRef::U32(_audio_buffer) => Some(SampleFormat::U32),
-                        GenericAudioBufferRef::S8(_audio_buffer) => Some(SampleFormat::I8),
-                        GenericAudioBufferRef::S16(_audio_buffer) => Some(SampleFormat::I16),
-                        GenericAudioBufferRef::S24(_audio_buffer) => Some(SampleFormat::I24),
-                        GenericAudioBufferRef::S32(_audio_buffer) => Some(SampleFormat::I32),
-                        GenericAudioBufferRef::F32(_audio_buffer) => Some(SampleFormat::F32),
-                        GenericAudioBufferRef::F64(_audio_buffer) => Some(SampleFormat::F64),
-                    }
-                }
+                let mut decoded_samples: Vec<f32> = Vec::new();
+                decoded.copy_to_vec_interleaved(&mut decoded_samples);
+                sample_data.append(&mut decoded_samples);
             }
             Err(Error::IoError(_)) => {
                 // The packet failed to decode due to an IO error, skip the packet.
@@ -195,9 +181,36 @@ pub fn parse_wav(path: &str) {
         }
     }
 
-    println!(
-        "Sample variant: {:?}",
-        sample_variant.expect("sample variant could not be determined")
-    );
-    println!("Sample count: {sample_count}");
+    let host = cpal::default_host();
+    let device = host
+        .default_output_device()
+        .expect("unable to fetch default output device");
+
+    let config = StreamConfig::from(SupportedStreamConfig::new(
+        channel_count.try_into().expect("channel count too large"),
+        sample_rate,
+        SupportedBufferSize::default(),
+        SampleFormat::F32,
+    ));
+
+    let mut sample_iterator = sample_data.into_iter();
+    let stream = device
+        .build_output_stream(
+            config,
+            move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
+                for d in data.iter_mut() {
+                    *d = sample_iterator.next().unwrap_or(0.0)
+                }
+            },
+            |err| eprintln!("stream error: {err}"),
+            None,
+        )
+        .expect("unable to build output stream");
+
+    stream.play().expect("unable to start stream");
+    thread::sleep(Duration::from_secs(
+        (time.as_secs() + 1)
+            .try_into()
+            .expect("duration time could not be converted"),
+    ));
 }

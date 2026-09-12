@@ -125,4 +125,14 @@ place, dev round trip working). Phase 1, Step 1 done (cpal device enumeration
 playing through a cpal output stream, phase-continuous across callbacks).
 Phase 1, Step 3 done (symphonia decodes a WAV file; duration, sample rate,
 real decoded sample format, and sample count all printed from actual PCM).
-Next up: Phase 1, Step 4.
+Phase 1, Step 4 done (decoded WAV samples played end-to-end through a cpal
+stream built from the file's own sample rate/channel count; output always
+normalized to f32 via symphonia's conversion). Known punts, to revisit later:
+whole file is decoded into memory before playback (deferred to Step 7's
+multi-voice/mixing redesign, rather than a one-off streaming fix now); no
+check that the output device actually supports the file's rate/channels
+(that's Step 6). Phase 1, Step 5 done (MP3 playback works via the same
+decode/playback path — only change needed was enabling symphonia's "mp3"
+feature flag, confirming the pipeline was built against symphonia's
+codec-agnostic traits rather than anything WAV-specific). Next up: Phase 1,
+Step 6.
